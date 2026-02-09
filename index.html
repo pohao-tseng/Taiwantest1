@@ -5,56 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台灣轉型正義・記憶小測驗</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f4f0; color: #333; }
-        .card { transition: all 0.3s ease; }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .btn-option { transition: all 0.2s; }
-        .btn-option.selected { border-color: #4b5563; background-color: #e5e7eb; font-weight: bold; }
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* 卡片基礎樣式 */
+        .card { 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-left: 4px solid transparent;
+        }
+        .card.done { border-left-color: #4f46e5; background-color: #fff; }
+        
+        /* 選項按鈕動畫 */
+        .btn-option { 
+            transition: all 0.2s ease; 
+            transform: scale(1);
+        }
+        .btn-option:active { transform: scale(0.95); }
+        .btn-option.selected { 
+            background-color: #4f46e5; 
+            color: white; 
+            border-color: #4f46e5; 
+            box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+        }
+
+        /* 故事展開動畫 */
+        .story-box {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0, 1, 0, 1), opacity 0.5s ease;
+            opacity: 0;
+        }
+        .story-box.open {
+            max-height: 200px; /* 足夠顯示內容的高度 */
+            opacity: 1;
+            transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+        }
+
+        /* 進度條 */
+        .progress-bar { transition: width 0.5s ease; }
+        
+        /* 揭曉按鈕動畫 */
+        .reveal-btn {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="min-h-screen flex flex-col items-center py-10 px-4">
+<body class="min-h-screen flex flex-col items-center py-8 px-4 pb-24">
 
-    <header class="max-w-3xl w-full text-center mb-10 fade-in">
-        <h1 class="text-3xl md:text-4xl font-bold mb-4 tracking-wider text-gray-800">那些應該被記得的名字</h1>
-        <p class="text-gray-600 leading-relaxed mb-6">
-            看到日本大選與近期的電影風波，我們不禁反思：<br>
-            如果台灣有更多人記得自己的歷史，我們是不是就更能了解民主自由是多得來不易？<br>
-            以下 25 個名字，你認得多少？
+    <div class="fixed top-0 left-0 w-full h-2 bg-gray-200 z-50">
+        <div id="progress" class="h-full bg-indigo-600 progress-bar" style="width: 0%"></div>
+    </div>
+
+    <header class="max-w-2xl w-full text-center mb-8 mt-4 fade-in">
+        <h1 class="text-2xl md:text-3xl font-bold mb-3 tracking-wider text-gray-800">那些應該被記得的名字</h1>
+        <p class="text-sm text-gray-500 mb-6">
+            點擊選項來累積歷史記憶<br>完成後可查看這 25 位前輩的故事
         </p>
-        <div class="inline-block bg-white px-6 py-3 rounded-lg shadow-sm text-sm text-gray-500">
-            <span class="block mb-1">計分規則：</span>
-            <span class="font-bold text-gray-700">聽過名字 +2分</span> | 
-            <span class="font-bold text-gray-700">說出故事 +4分</span>
+        
+        <div class="flex justify-center gap-4 text-xs md:text-sm text-gray-600 bg-white p-3 rounded-xl shadow-sm inline-block">
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full border border-gray-300"></span> 不認識 0分</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-indigo-600"></span> 聽過 2分</div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-indigo-600"></span> 知故事 4分</div>
         </div>
     </header>
 
-    <main id="quiz-container" class="max-w-3xl w-full space-y-4 mb-12">
+    <main id="quiz-container" class="max-w-2xl w-full space-y-3">
         </main>
 
-    <div id="result-section" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8 text-center relative animate-bounce-in">
-            <button onclick="closeResult()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+    <div id="result-section" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center transform transition-all scale-100">
+            <button onclick="closeResult()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
             
-            <div class="mb-2 text-sm text-gray-500 tracking-widest uppercase">Your Score</div>
-            <div id="final-score" class="text-6xl font-bold text-gray-800 mb-4">0</div>
-            <h2 id="result-title" class="text-2xl font-bold text-indigo-700 mb-4"></h2>
-            <p id="result-desc" class="text-gray-600 leading-relaxed mb-8 text-justify px-4"></p>
+            <div class="text-xs font-bold text-gray-400 tracking-widest uppercase mb-1">總得分</div>
+            <div id="final-score" class="text-6xl font-black text-indigo-600 mb-2">0</div>
+            <h2 id="result-title" class="text-xl font-bold text-gray-800 mb-3"></h2>
+            <div class="w-16 h-1 bg-indigo-100 mx-auto mb-4 rounded"></div>
+            <p id="result-desc" class="text-sm text-gray-600 leading-relaxed mb-6 text-justify px-2"></p>
             
             <div class="flex flex-col gap-3">
-                <button onclick="shareResult()" class="w-full bg-gray-800 text-white py-3 rounded-lg hover:bg-gray-700 transition">複製結果分享</button>
-                <button onclick="closeResult()" class="w-full border border-gray-300 text-gray-600 py-3 rounded-lg hover:bg-gray-50 transition">回到清單</button>
+                <button onclick="shareResult()" class="w-full bg-gray-900 text-white py-3 rounded-xl hover:bg-black transition font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-share-alt"></i> 複製結果分享
+                </button>
+                <button onclick="closeResult()" class="w-full border border-gray-200 text-gray-600 py-3 rounded-xl hover:bg-gray-50 transition">
+                    回到列表看故事
+                </button>
             </div>
         </div>
     </div>
 
-    <div class="fixed bottom-6 left-0 right-0 flex justify-center z-40 px-4">
-        <button onclick="calculateScore()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 flex items-center gap-2">
-            <span>查看我的測驗結果</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" /></svg>
+    <div class="fixed bottom-6 z-40 px-4 w-full max-w-2xl flex justify-center pointer-events-none">
+        <button onclick="calculateScore()" id="calc-btn" class="pointer-events-auto shadow-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full transition-all transform translate-y-20 opacity-0 flex items-center gap-2">
+            <span>查看測驗結果</span>
+            <i class="fas fa-arrow-right"></i>
         </button>
     </div>
 
@@ -87,58 +138,93 @@
             { name: "鄭南榕", desc: "《自由時代》周刊創辦人，主張「百分之百的言論自由」，為抵抗拘提自焚殉道。" }
         ];
 
-        let scores = new Array(25).fill(0);
+        let scores = new Array(25).fill(null); // null表示未作答
 
         function initQuiz() {
             const container = document.getElementById('quiz-container');
             people.forEach((person, index) => {
                 const div = document.createElement('div');
-                div.className = "bg-white p-6 rounded-lg shadow-sm border border-gray-100 card flex flex-col md:flex-row md:items-center justify-between gap-4";
+                div.className = "bg-white p-5 rounded-xl shadow-sm card relative overflow-hidden";
                 div.innerHTML = `
-                    <div class="flex-1">
-                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            ${index + 1}. ${person.name}
-                            <button onclick="toggleDesc(${index})" class="text-xs text-gray-400 border border-gray-300 rounded-full w-5 h-5 flex items-center justify-center hover:bg-gray-100" title="查看簡介">?</button>
-                        </h3>
-                        <p id="desc-${index}" class="hidden text-sm text-gray-500 mt-2 bg-gray-50 p-2 rounded">${person.desc}</p>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center justify-between md:justify-start gap-2">
+                                <span><span class="text-indigo-200 text-sm mr-2">#${index + 1}</span>${person.name}</span>
+                                <button onclick="toggleStory(${index}, this)" id="reveal-btn-${index}" class="hidden text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors flex items-center gap-1">
+                                    <i class="fas fa-book-open"></i> 看故事
+                                </button>
+                            </h3>
+                        </div>
+                        <div class="flex gap-2 text-xs md:text-sm font-medium shrink-0 justify-end">
+                            <button onclick="setScore(${index}, 0, this)" class="btn-option px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50" data-idx="${index}">不認識</button>
+                            <button onclick="setScore(${index}, 2, this)" class="btn-option px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50" data-idx="${index}">聽過</button>
+                            <button onclick="setScore(${index}, 4, this)" class="btn-option px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50" data-idx="${index}">知故事</button>
+                        </div>
                     </div>
-                    <div class="flex gap-2 text-sm shrink-0">
-                        <button onclick="setScore(${index}, 0, this)" class="btn-option px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50 selected" data-idx="${index}">不認識 (0)</button>
-                        <button onclick="setScore(${index}, 2, this)" class="btn-option px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50" data-idx="${index}">聽過 (2)</button>
-                        <button onclick="setScore(${index}, 4, this)" class="btn-option px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50" data-idx="${index}">知故事 (4)</button>
+                    <div id="story-${index}" class="story-box bg-gray-50 mt-0 rounded-lg text-sm text-gray-600 leading-relaxed">
+                        <div class="p-4 border-t border-gray-100 mt-3">
+                            <span class="font-bold text-indigo-500 block mb-1">關於 ${person.name}：</span>
+                            ${person.desc}
+                        </div>
                     </div>
                 `;
                 container.appendChild(div);
             });
         }
 
-        function toggleDesc(index) {
-            const el = document.getElementById(`desc-${index}`);
-            el.classList.toggle('hidden');
-        }
-
         function setScore(index, score, btn) {
             scores[index] = score;
-            // Update visual state
+            
+            // UI 更新
             const parent = btn.parentElement;
             const buttons = parent.querySelectorAll('.btn-option');
-            buttons.forEach(b => {
-                b.classList.remove('selected', 'bg-indigo-50', 'border-indigo-500', 'text-indigo-700');
-                if(b === btn) {
-                    b.classList.add('selected', 'bg-indigo-50', 'border-indigo-500', 'text-indigo-700');
-                }
-            });
+            buttons.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
             
-            // Auto reveal description if they know the story
-            if(score >= 2) {
-                document.getElementById(`desc-${index}`).classList.remove('hidden');
+            // 標記卡片已完成
+            const card = btn.closest('.card');
+            card.classList.add('done');
+
+            // 顯示看故事按鈕 (如果尚未顯示)
+            const revealBtn = document.getElementById(`reveal-btn-${index}`);
+            if (revealBtn.classList.contains('hidden')) {
+                revealBtn.classList.remove('hidden');
+                revealBtn.classList.add('fade-in');
+            }
+
+            updateProgress();
+        }
+
+        function toggleStory(index, btn) {
+            const storyBox = document.getElementById(`story-${index}`);
+            storyBox.classList.toggle('open');
+            
+            // 按鈕文字切換
+            if (storyBox.classList.contains('open')) {
+                btn.innerHTML = '<i class="fas fa-chevron-up"></i> 收起';
+                btn.classList.remove('bg-indigo-50', 'text-indigo-600');
+                btn.classList.add('bg-gray-100', 'text-gray-500');
+            } else {
+                btn.innerHTML = '<i class="fas fa-book-open"></i> 看故事';
+                btn.classList.add('bg-indigo-50', 'text-indigo-600');
+                btn.classList.remove('bg-gray-100', 'text-gray-500');
+            }
+        }
+
+        function updateProgress() {
+            const answeredCount = scores.filter(s => s !== null).length;
+            const percentage = (answeredCount / 25) * 100;
+            document.getElementById('progress').style.width = `${percentage}%`;
+
+            const calcBtn = document.getElementById('calc-btn');
+            if (answeredCount === 25) {
+                calcBtn.classList.remove('translate-y-20', 'opacity-0');
             }
         }
 
         function calculateScore() {
-            const total = scores.reduce((a, b) => a + b, 0);
-            let title = "";
-            let desc = "";
+            const total = scores.reduce((a, b) => (a || 0) + (b || 0), 0);
+            let title = "", desc = "";
 
             if (total <= 29) {
                 title = "歷史的白紙 📄";
@@ -170,7 +256,8 @@
         function shareResult() {
             const score = document.getElementById('final-score').innerText;
             const title = document.getElementById('result-title').innerText;
-            const text = `我在「台灣轉型正義・記憶小測驗」中獲得了 ${score} 分：${title}。\n你也來測測看你認得多少台灣歷史的名字？\n#台灣轉型正義 #歷史記憶`;
+            const url = window.location.href.split('?')[0]; // 去除參數
+            const text = `我在「台灣轉型正義・記憶小測驗」中獲得了 ${score} 分：${title}。\n你也來測測看你認得多少台灣歷史的名字？\n${url} \n#台灣轉型正義 #歷史記憶`;
             
             navigator.clipboard.writeText(text).then(() => {
                 alert('結果已複製！可以貼到社群媒體分享了。');
